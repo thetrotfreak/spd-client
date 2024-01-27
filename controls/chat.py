@@ -64,7 +64,7 @@ class ChatControl(UserControl):
                     tight=True,
                     spacing=5,
                 ),
-            ],w
+            ],
             vertical_alignment=CrossAxisAlignment.START,
         )
 
