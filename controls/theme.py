@@ -23,8 +23,7 @@ class ChooseThemeDialog(UserControl):
         self.page = page
         self.dialog = AlertDialog(
             title=Text(
-                value="Choose theme",
-                font_family="sans",
+                value="choose theme".title(),
                 theme_style=TextThemeStyle.TITLE_LARGE,
             ),
             content=Column(
@@ -33,12 +32,12 @@ class ChooseThemeDialog(UserControl):
                         value=self.page.theme_mode,
                         content=Column(
                             controls=[
-                                Radio(value=ThemeMode.LIGHT.value, label="Light"),
-                                Radio(value=ThemeMode.DARK.value, label="Dark"),
-                                Radio(
-                                    value=ThemeMode.SYSTEM.value,
-                                    label="Follow System",
-                                ),
+                                *map(
+                                    lambda enum: Radio(
+                                        value=enum[1].value, label=enum[1].value.title()
+                                    ),
+                                    ThemeMode._member_map_.items(),
+                                )
                             ]
                         ),
                         on_change=self.__theme_mode__,
