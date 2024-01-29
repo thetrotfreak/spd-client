@@ -18,18 +18,24 @@ from flet import (
     CircleAvatar,
     Column,
     colors,
+    border,
     ControlEvent,
     border_radius,
     Image,
     ImageFit,
+    ListView,
+    InputBorder,
+    Container,
+    BoxShape,
+    BorderRadius,
 )
 
 from utils.preferences import Preference
 
 
 class Message:
-    def __init__(self, user: str, text: str = "", image: str | None = None) -> None:
-        self.user = user
+    def __init__(self, user: str, text: str | None = None, image: str | None = None):
+        self.user = user if user is not None else "Guest"
         self.text = text
         self.image = image
 
@@ -37,12 +43,43 @@ class Message:
         return Preference.__COLORS__[hash(self.user) % len(Preference.__COLORS__)]
 
 
-class ChatControl(UserControl):
+class ChatWindowControl(UserControl):
+    """
+    A scrollable list of chat messages
+    """
+
+    def __init__(self, page: Page):
+        super().__init__()
+        self.page = page
+        self.control = Ref[ListView]()
+        self.page.pubsub.subscribe(lambda message: self.__subscribe__(message=message))
+
+    def __subscribe__(self, message: Message):
+        self.control.current.controls.append(
+            MessageControl(page=self.page, message=message)
+        )
+        self.control.current.update()
+        # self.page.update()
+
+    def build(self):
+        return ListView(
+            ref=self.control,
+            expand=True,
+            auto_scroll=True,
+            spacing=8,
+            padding=16,
+        )
+
+
+class MessageControl(UserControl):
+    """
+    Formatted messages
+    """
+
     def __init__(self, page: Page, message: Message):
         super().__init__()
         self.page = page
         self.message = message
-        print(message.image)
 
     def build(self):
         return Row(
@@ -50,8 +87,9 @@ class ChatControl(UserControl):
                 CircleAvatar(
                     content=Text(
                         value=self.message.user[0].capitalize(),
-                        color=self.message.avatar(),
-                    )
+                        color=colors.ON_PRIMARY,
+                    ),
+                    bgcolor=self.message.avatar(),
                 ),
                 Column(
                     controls=[
@@ -69,15 +107,15 @@ class ChatControl(UserControl):
         )
 
 
-class MessageControl(UserControl):
+class ChatBoxControl(UserControl):
     def __init__(self, page: Page):
         super().__init__()
         self.page = page
-        self.message = Ref[TextField]()
-        self.payload = Ref[FilePicker]()
+        self.text = Ref[TextField]()
+        self.file = Ref[FilePicker]()
         self.page.overlay.append(
             FilePicker(
-                ref=self.payload,
+                ref=self.file,
                 on_result=lambda event: self.__on_result__(event=event),
             )
         )
@@ -85,11 +123,10 @@ class MessageControl(UserControl):
 
     def __on_result__(self, event: FilePickerResultEvent):
         if event.files is not None:
-            # self.page.session.set(key=event.files.name, value=event.files.path)
             self.page.pubsub.send_all(
                 Message(
                     user=self.page.session.get("user"),
-                    text="",
+                    text=self.text.current.value,
                 )
             )
             self.page.update()
@@ -97,35 +134,61 @@ class MessageControl(UserControl):
     def __on_submit__(self, event: ControlEvent):
         if event.control.value:
             self.page.pubsub.send_all(
-                Message(self.page.session.get("user"), event.control.value)
+                Message(
+                    user=self.page.session.get("user"),
+                    text=event.control.value,
+                )
             )
             event.control.value = None
             event.control.focus()
             self.page.update()
 
+    def __on_click__(self, event: ControlEvent):
+        if self.text.current.value:
+            self.page.pubsub.send_all(
+                Message(
+                    user=self.page.session.get("user"),
+                    text=self.text.current.value,
+                )
+            )
+            self.text.current.value = None
+            self.text.current.focus()
+            self.text.current.update()
+            self.page.update()
+
     def build(self):
         return Row(
             controls=[
+                Container(
+                    content=IconButton(
+                        icon=icons.IMAGE,
+                        tooltip="Upload flowchart",
+                        on_click=lambda _: self.file.current.pick_files(
+                            file_type=FilePickerFileType.IMAGE,
+                        ),
+                    ),
+                    bgcolor=colors.OUTLINE_VARIANT,
+                ),
                 TextField(
-                    ref=self.message,
-                    hint_text="Type a message...",
+                    ref=self.text,
+                    hint_text="Type a message",
                     autofocus=True,
                     shift_enter=True,
                     filled=True,
                     expand=True,
                     multiline=True,
                     on_submit=lambda event: self.__on_submit__(event=event),
-                    border_radius=border_radius.all(value=32),
+                    border=InputBorder.NONE,
+                    dense=True,
                 ),
-                IconButton(
-                    icon=icons.IMAGE,
-                    tooltip="Upload flowchart",
-                    on_click=lambda _: self.payload.current.pick_files(
-                        file_type=FilePickerFileType.IMAGE,
+                Container(
+                    content=IconButton(
+                        icon=icons.SEND,
+                        tooltip="Send message",
+                        on_click=lambda _: self.__on_click__(event=_),
                     ),
+                    bgcolor=colors.OUTLINE_VARIANT,
                 ),
-                IconButton(icon=icons.SEND, tooltip="Send message"),
             ],
             expand=True,
-            alignment=MainAxisAlignment.END,
         )
