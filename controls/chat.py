@@ -121,6 +121,13 @@ class ChatBoxControl(UserControl):
         )
         self.page.update()
 
+    def __nullify_whitespace_text__(self) -> None:
+        """
+        Cut extra spaces and check if the text should be sent or not
+        """
+        self.text.current.value = self.text.current.value.strip()
+        self.text.current.update()
+
     def __on_result__(self, event: FilePickerResultEvent):
         if event.files is not None:
             self.page.pubsub.send_all(
@@ -132,6 +139,7 @@ class ChatBoxControl(UserControl):
             self.page.update()
 
     def __on_submit__(self, event: ControlEvent):
+        self.__nullify_whitespace_text__()
         if event.control.value:
             self.page.pubsub.send_all(
                 Message(
@@ -144,6 +152,7 @@ class ChatBoxControl(UserControl):
             self.page.update()
 
     def __on_click__(self, event: ControlEvent):
+        self.__nullify_whitespace_text__()
         if self.text.current.value:
             self.page.pubsub.send_all(
                 Message(
