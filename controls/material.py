@@ -11,9 +11,7 @@ from flet import (
     Text,
     TextThemeStyle,
     UserControl,
-    Icon,
     icons,
-    StadiumBorder,
     IconButton,
 )
 

@@ -1,14 +1,9 @@
 from flet import (
     Container,
-    CrossAxisAlignment,
-    ListView,
-    MainAxisAlignment,
     Page,
     app,
     border,
     colors,
-    border_radius,
-    Column,
 )
 
 from controls import WindowControl, ChatBoxControl, ChatWindowControl
@@ -21,7 +16,7 @@ def main(page: Page):
     Preference(page).load()
 
     page.add(
-        WindowControl(page=page),
+        WindowControl(page=page, title="Multimodal"),
         Container(
             content=ChatWindowControl(page),
             border=border.all(

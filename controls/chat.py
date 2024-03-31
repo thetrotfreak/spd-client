@@ -2,35 +2,36 @@ from flet import (
     FilePicker,
     FilePickerFileType,
     FilePickerResultEvent,
-    FilePickerUploadEvent,
-    FilePickerUploadFile,
     UserControl,
     Row,
     Page,
     Ref,
     TextField,
     IconButton,
-    Icon,
     icons,
     Text,
-    MainAxisAlignment,
     CrossAxisAlignment,
     CircleAvatar,
     Column,
     colors,
-    border,
     ControlEvent,
-    border_radius,
-    Image,
-    ImageFit,
     ListView,
     InputBorder,
     Container,
-    BoxShape,
-    BorderRadius,
 )
 
 from utils.preferences import Preference
+import requests
+import typing
+import json
+
+ROUTE = {"QA": "http://localhost:8000/qa"}
+
+
+class ChatCardControl(UserControl):
+    def __init__(self, page: Page):
+        super().__init__()
+        self.page = page
 
 
 class Message:
@@ -97,7 +98,9 @@ class MessageControl(UserControl):
                             value=self.message.user,
                             weight="bold",
                         ),
-                        Text(value=self.message.text),
+                        Text(
+                            value=self.message.text,
+                        ),
                     ],
                     tight=True,
                     spacing=5,
@@ -111,6 +114,9 @@ class ChatBoxControl(UserControl):
     def __init__(self, page: Page):
         super().__init__()
         self.page = page
+        self.isQuestion = False
+        self.questionText = ""
+        self.payload = {"text": "", "text_pair": ""}
         self.text = Ref[TextField]()
         self.file = Ref[FilePicker]()
         self.page.overlay.append(
@@ -120,6 +126,19 @@ class ChatBoxControl(UserControl):
             )
         )
         self.page.update()
+
+    def __fetch_answer__(self, text: str, text_pair: str) -> typing.Any | None:
+        if not text and not text_pair:
+            return None
+
+        self.payload.update({"text": text})
+        self.payload.update({"text_pair": text_pair})
+
+        response = requests.post(url=ROUTE.get("QA"), data=json.dumps(self.payload))
+        if response.ok:
+            return response.content
+        else:
+            return None
 
     def __nullify_whitespace_text__(self) -> None:
         """
@@ -147,6 +166,22 @@ class ChatBoxControl(UserControl):
                     text=event.control.value,
                 )
             )
+            if self.isQuestion:
+                print("Question")
+                answer = self.__fetch_answer__(
+                    text=event.control.value, text_pair=self.questionText
+                )
+                print(f"{answer=}")
+                if answer:
+                    answerDict = json.loads(answer)
+                    self.page.pubsub.send_all(
+                        Message(user="ChatGPT", text=answerDict.get("answer"))
+                    )
+            else:
+                print("Paragraph")
+                self.questionText = event.control.value
+                self.isQuestion = True
+
             event.control.value = None
             event.control.focus()
             self.page.update()
