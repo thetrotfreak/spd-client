@@ -1,17 +1,15 @@
 from flet import (
-    UserControl,
-    NavigationRail,
-    NavigationRailLabelType,
-    NavigationRailDestination,
-    icons,
-    Icon,
-    Text,
-    Ref,
-    Page,
-    IconButton,
-    FloatingActionButton,
-    colors,
     ControlEvent,
+    Icon,
+    IconButton,
+    NavigationRail,
+    NavigationRailDestination,
+    NavigationRailLabelType,
+    Page,
+    Ref,
+    Text,
+    UserControl,
+    icons,
 )
 
 

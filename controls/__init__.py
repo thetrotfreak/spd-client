@@ -1,5 +1,4 @@
+from .chat import ChatBoxControl, ChatWindowControl
 from .menu import MenuControl
-from .window import WindowControl
-from .chat import ChatBoxControl
-from .chat import ChatWindowControl
 from .siderail import SideRail
+from .window import WindowControl

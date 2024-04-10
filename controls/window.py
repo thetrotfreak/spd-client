@@ -4,11 +4,11 @@ from flet import (
     MainAxisAlignment,
     Page,
     Row,
+    Text,
+    TextThemeStyle,
     UserControl,
     WindowDragArea,
     icons,
-    Text,
-    TextThemeStyle,
 )
 
 from .menu import MenuControl
