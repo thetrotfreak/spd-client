@@ -4,9 +4,15 @@ from flet import (
     app,
     border,
     colors,
+    BoxShape,
+    border_radius,
+    Row,
+    VerticalDivider,
+    Column,
+    MainAxisAlignment,
 )
 
-from controls import WindowControl, ChatBoxControl, ChatWindowControl
+from controls import WindowControl, ChatBoxControl, ChatWindowControl, SideRail
 from utils import Preference
 
 
@@ -16,16 +22,30 @@ def main(page: Page):
     Preference(page).load()
 
     page.add(
-        WindowControl(page=page, title="Multimodal"),
-        Container(
-            content=ChatWindowControl(page),
-            border=border.all(
-                width=2,
-                color=colors.OUTLINE_VARIANT,
-            ),
+        WindowControl(page=page, title="Flet"),
+        Row(
+            controls=[
+                SideRail(page=page),
+                # VerticalDivider(width=1),
+                Column(
+                    controls=[
+                        Container(
+                            content=ChatWindowControl(page),
+                            border=border.all(
+                                width=1.25,
+                                color=colors.OUTLINE_VARIANT,
+                            ),
+                            expand=True,
+                            border_radius=border_radius.all(25),
+                        ),
+                        ChatBoxControl(page=page),
+                    ],
+                    expand=True,
+                    alignment=MainAxisAlignment.START,
+                ),
+            ],
             expand=True,
         ),
-        ChatBoxControl(page=page),
     )
 
 

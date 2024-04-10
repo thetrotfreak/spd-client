@@ -8,6 +8,7 @@ from flet import (
     WindowDragArea,
     icons,
     Text,
+    TextThemeStyle,
 )
 
 from .menu import MenuControl
@@ -31,17 +32,24 @@ class WindowControl(UserControl):
         # )
         return Row(
             controls=[
-                Row(controls=[Text(self.page.title)]),
+                Row(
+                    controls=[
+                        Text(
+                            value=self.page.title,
+                            theme_style=TextThemeStyle.TITLE_LARGE,
+                        )
+                    ]
+                ),
                 Row(
                     controls=[
                         WindowDragArea(content=IconButton(icon=icons.DRAG_INDICATOR)),
                         MenuControl(page=self.page),
                     ],
-                    expand=True,
                     alignment=MainAxisAlignment.END,
                     vertical_alignment=CrossAxisAlignment.CENTER,
                 ),
             ],
-            alignment=MainAxisAlignment.CENTER,
+            expand=True,
+            alignment=MainAxisAlignment.SPACE_BETWEEN,
             vertical_alignment=CrossAxisAlignment.CENTER,
         )

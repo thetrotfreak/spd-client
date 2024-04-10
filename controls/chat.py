@@ -18,6 +18,12 @@ from flet import (
     ListView,
     InputBorder,
     Container,
+    BoxShape,
+    BorderRadius,
+    border_radius,
+    border,
+    padding,
+    TextOverflow,
 )
 
 from utils.preferences import Preference
@@ -28,20 +34,71 @@ import json
 ROUTE = {"QA": "http://localhost:8000/qa"}
 
 
-class ChatCardControl(UserControl):
-    def __init__(self, page: Page):
-        super().__init__()
-        self.page = page
-
-
 class Message:
-    def __init__(self, user: str, text: str | None = None, image: str | None = None):
-        self.user = user if user is not None else "Guest"
+    def __init__(
+        self,
+        user: str | None = None,
+        text: str | None = None,
+        image: str | None = None,
+        randomizer: bool = False,
+    ):
+        self.user = user if user is not None else "You"
         self.text = text
         self.image = image
+        self.__randomizer = randomizer
 
     def avatar(self):
-        return Preference.__COLORS__[hash(self.user) % len(Preference.__COLORS__)]
+        if self.__randomizer:
+            return Preference.__COLORS__[hash(self.user) % len(Preference.__COLORS__)]
+        else:
+            return colors.PRIMARY_CONTAINER
+
+
+class MessageControl(UserControl):
+    """
+    Formatted messages
+    """
+
+    def __init__(self, page: Page, message: Message):
+        super().__init__()
+        self.page = page
+        self.message = message
+
+    def build(self):
+        return Row(
+            controls=[
+                CircleAvatar(
+                    content=Text(
+                        value=self.message.user[0].capitalize(),
+                    ),
+                    bgcolor=self.message.avatar(),
+                ),
+                Column(
+                    controls=[
+                        Text(
+                            value=self.message.user,
+                            weight="bold",
+                        ),
+                        Container(
+                            content=Text(
+                                value=self.message.text,
+                                no_wrap=False,
+                                max_lines=4,
+                                overflow=TextOverflow.ELLIPSIS,
+                            ),
+                            border=None,
+                            expand=False,
+                            border_radius=border_radius.only(0, 25, 25, 25),
+                            bgcolor=colors.SECONDARY_CONTAINER,
+                            padding=padding.symmetric(8, 12),
+                        ),
+                    ],
+                    tight=True,
+                    spacing=5,
+                ),
+            ],
+            vertical_alignment=CrossAxisAlignment.START,
+        )
 
 
 class ChatWindowControl(UserControl):
@@ -69,44 +126,6 @@ class ChatWindowControl(UserControl):
             auto_scroll=True,
             spacing=8,
             padding=16,
-        )
-
-
-class MessageControl(UserControl):
-    """
-    Formatted messages
-    """
-
-    def __init__(self, page: Page, message: Message):
-        super().__init__()
-        self.page = page
-        self.message = message
-
-    def build(self):
-        return Row(
-            controls=[
-                CircleAvatar(
-                    content=Text(
-                        value=self.message.user[0].capitalize(),
-                        color=colors.ON_PRIMARY,
-                    ),
-                    bgcolor=self.message.avatar(),
-                ),
-                Column(
-                    controls=[
-                        Text(
-                            value=self.message.user,
-                            weight="bold",
-                        ),
-                        Text(
-                            value=self.message.text,
-                        ),
-                    ],
-                    tight=True,
-                    spacing=5,
-                ),
-            ],
-            vertical_alignment=CrossAxisAlignment.START,
         )
 
 
@@ -167,18 +186,15 @@ class ChatBoxControl(UserControl):
                 )
             )
             if self.isQuestion:
-                print("Question")
                 answer = self.__fetch_answer__(
                     text=event.control.value, text_pair=self.questionText
                 )
-                print(f"{answer=}")
                 if answer:
                     answerDict = json.loads(answer)
                     self.page.pubsub.send_all(
                         Message(user="ChatGPT", text=answerDict.get("answer"))
                     )
             else:
-                print("Paragraph")
                 self.questionText = event.control.value
                 self.isQuestion = True
 
@@ -203,16 +219,6 @@ class ChatBoxControl(UserControl):
     def build(self):
         return Row(
             controls=[
-                Container(
-                    content=IconButton(
-                        icon=icons.IMAGE,
-                        tooltip="Upload flowchart",
-                        on_click=lambda _: self.file.current.pick_files(
-                            file_type=FilePickerFileType.IMAGE,
-                        ),
-                    ),
-                    bgcolor=colors.OUTLINE_VARIANT,
-                ),
                 TextField(
                     ref=self.text,
                     hint_text="Type a message",
@@ -222,8 +228,24 @@ class ChatBoxControl(UserControl):
                     expand=True,
                     multiline=True,
                     on_submit=lambda event: self.__on_submit__(event=event),
-                    border=InputBorder.NONE,
+                    border=border.all(
+                        width=0,
+                        color=colors.OUTLINE_VARIANT,
+                    ),
                     dense=True,
+                    border_radius=border_radius.all(25),
+                    max_lines=4,
+                ),
+                Container(
+                    content=IconButton(
+                        icon=icons.IMAGE,
+                        tooltip="Upload image/pdf",
+                        on_click=lambda _: self.file.current.pick_files(
+                            file_type=FilePickerFileType.IMAGE,
+                        ),
+                    ),
+                    bgcolor=colors.SECONDARY_CONTAINER,
+                    shape=BoxShape.CIRCLE,
                 ),
                 Container(
                     content=IconButton(
@@ -231,7 +253,8 @@ class ChatBoxControl(UserControl):
                         tooltip="Send message",
                         on_click=lambda _: self.__on_click__(event=_),
                     ),
-                    bgcolor=colors.OUTLINE_VARIANT,
+                    bgcolor=colors.SECONDARY_CONTAINER,
+                    shape=BoxShape.CIRCLE,
                 ),
             ],
             expand=True,
