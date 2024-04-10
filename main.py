@@ -1,18 +1,16 @@
 from flet import (
+    Column,
     Container,
+    MainAxisAlignment,
     Page,
+    Row,
     app,
     border,
-    colors,
-    BoxShape,
     border_radius,
-    Row,
-    VerticalDivider,
-    Column,
-    MainAxisAlignment,
+    colors,
 )
 
-from controls import WindowControl, ChatBoxControl, ChatWindowControl, SideRail
+from controls import ChatBoxControl, ChatWindowControl, SideRail, WindowControl
 from utils import Preference
 
 

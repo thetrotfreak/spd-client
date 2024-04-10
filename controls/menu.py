@@ -3,14 +3,13 @@ from flet import (
     Page,
     PopupMenuButton,
     PopupMenuItem,
+    ThemeMode,
     UserControl,
     icons,
-    ThemeMode,
 )
 
 from controls.material import MaterialYouCustomizationDialog
 from controls.theme import ChooseThemeDialog
-
 from utils.preferences import Preference
 
 

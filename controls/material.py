@@ -5,6 +5,7 @@ from flet import (
     ControlEvent,
     Dropdown,
     ElevatedButton,
+    IconButton,
     Page,
     Ref,
     ResponsiveRow,
@@ -12,7 +13,6 @@ from flet import (
     TextThemeStyle,
     UserControl,
     icons,
-    IconButton,
 )
 
 from utils import Preference

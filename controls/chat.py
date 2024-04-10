@@ -1,35 +1,34 @@
+import json
+import typing
+
+import requests
 from flet import (
+    BoxShape,
+    CircleAvatar,
+    Column,
+    Container,
+    ControlEvent,
+    CrossAxisAlignment,
     FilePicker,
     FilePickerFileType,
     FilePickerResultEvent,
-    UserControl,
-    Row,
+    IconButton,
+    ListView,
     Page,
     Ref,
-    TextField,
-    IconButton,
-    icons,
+    Row,
     Text,
-    CrossAxisAlignment,
-    CircleAvatar,
-    Column,
-    colors,
-    ControlEvent,
-    ListView,
-    InputBorder,
-    Container,
-    BoxShape,
-    BorderRadius,
-    border_radius,
-    border,
-    padding,
+    TextField,
     TextOverflow,
+    UserControl,
+    border,
+    border_radius,
+    colors,
+    icons,
+    padding,
 )
 
 from utils.preferences import Preference
-import requests
-import typing
-import json
 
 ROUTE = {"QA": "http://localhost:8000/qa"}
 
