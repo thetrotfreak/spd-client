@@ -20,7 +20,7 @@ class Configuration(NamedTuple):
 
 class Preference:
     __config__ = Configuration(
-        path=Path(__file__).parent.parent.joinpath(".graphwise", "config.json"),
+        path=Path(__file__).parent.parent.joinpath(".config", "config.json"),
         schema={
             "type": "object",
             "properties": {
