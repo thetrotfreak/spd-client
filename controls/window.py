@@ -21,35 +21,28 @@ class WindowControl(UserControl):
         self.page.title = title
 
     def build(self):
-        # return Row(
-        #     controls=[
-        #         WindowDragArea(content=IconButton(icon=icons.DRAG_INDICATOR)),
-        #         MenuControl(page=self.page),
-        #     ],
-        #     expand=True,
-        #     alignment=MainAxisAlignment.END,
-        #     vertical_alignment=CrossAxisAlignment.CENTER,
-        # )
         return Row(
             controls=[
                 Row(
                     controls=[
                         Text(
                             value=self.page.title,
-                            theme_style=TextThemeStyle.TITLE_LARGE,
+                            theme_style=TextThemeStyle.TITLE_MEDIUM,
                         )
-                    ]
+                    ],
+                    expand=True,
+                    alignment=MainAxisAlignment.END,
                 ),
                 Row(
                     controls=[
                         WindowDragArea(content=IconButton(icon=icons.DRAG_INDICATOR)),
                         MenuControl(page=self.page),
                     ],
+                    expand=True,
                     alignment=MainAxisAlignment.END,
                     vertical_alignment=CrossAxisAlignment.CENTER,
                 ),
             ],
             expand=True,
-            alignment=MainAxisAlignment.SPACE_BETWEEN,
             vertical_alignment=CrossAxisAlignment.CENTER,
         )
