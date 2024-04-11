@@ -1,3 +1,5 @@
+from typing import Callable
+
 from flet import (
     AlertDialog,
     Column,
@@ -8,6 +10,7 @@ from flet import (
     Radio,
     RadioGroup,
     Text,
+    TextAlign,
     TextThemeStyle,
     ThemeMode,
     UserControl,
@@ -17,14 +20,17 @@ from utils import Preference
 
 
 class ChooseThemeDialog(UserControl):
-    def __init__(self, page: Page):
+    def __init__(self, page: Page, callback: Callable[[], None]):
         super().__init__()
         self.pref = Preference(page)
         self.page = page
+        self.callback = callback
         self.dialog = AlertDialog(
             title=Text(
-                value="choose theme".title(),
+                value="app theme".title(),
                 theme_style=TextThemeStyle.TITLE_LARGE,
+                expand=True,
+                text_align=TextAlign.CENTER,
             ),
             content=Column(
                 controls=[
@@ -51,7 +57,8 @@ class ChooseThemeDialog(UserControl):
 
     def __theme_mode__(self, event: ControlEvent):
         self.pref.update(k="theme", v=event.control.value)
-        self.page.theme_mode
+        self.page.theme_mode = event.control.value
+        self.callback()
 
     def open(self):
         self.page.dialog = self.dialog
