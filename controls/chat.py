@@ -83,7 +83,7 @@ class MessageControl(UserControl):
                                 value=self.message.text,
                                 no_wrap=False,
                                 max_lines=4,
-                                overflow=TextOverflow.ELLIPSIS,
+                                overflow=TextOverflow.FADE,
                             ),
                             border=None,
                             expand=False,

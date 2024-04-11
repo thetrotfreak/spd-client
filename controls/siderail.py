@@ -1,7 +1,6 @@
 from flet import (
     ControlEvent,
     Icon,
-    IconButton,
     NavigationRail,
     NavigationRailDestination,
     NavigationRailLabelType,
@@ -41,12 +40,6 @@ class SideRail(UserControl):
             extended=False,
             label_type=NavigationRailLabelType.NONE,
             group_alignment=-1.0,
-            # leading=FloatingActionButton(icon=icons.CREATE, text="New chat"),
-            leading=IconButton(
-                icon=icons.MENU,
-                on_click=lambda _: self.__on_click__(),
-                selected_icon=Icon(icons.MENU_OPEN),
-            ),
             destinations=[
                 NavigationRailDestination(
                     icon_content=Icon(icons.MENU),
