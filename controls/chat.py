@@ -1,5 +1,5 @@
 import json
-import typing
+from typing import Any, Optional
 
 import requests
 from flet import (
@@ -16,13 +16,12 @@ from flet import (
     IconButton,
     ListView,
     MainAxisAlignment,
-    Page,
     Ref,
     Row,
     Text,
     TextField,
     TextOverflow,
-    UserControl,
+    VerticalAlignment,
     border_radius,
     colors,
     icons,
@@ -57,85 +56,73 @@ class Message:
             return colors.PRIMARY_CONTAINER
 
 
-class MessageControl(UserControl):
+class MessageControl(Row):
     """
     Formatted messages
     """
 
-    def __init__(self, page: Page, message: Message):
+    def __init__(self, message: Message):
         super().__init__()
-        self.page = page
         self.message = message
+        self.vertical_alignment = CrossAxisAlignment.START
 
     def build(self):
-        return Row(
-            controls=[
-                CircleAvatar(
-                    content=Text(
-                        value=self.message.user[0].capitalize(),
+        self.controls = [
+            CircleAvatar(
+                content=Text(
+                    value=self.message.user[0].capitalize(),
+                ),
+                bgcolor=self.message.avatar(),
+            ),
+            Column(
+                controls=[
+                    Text(
+                        value=self.message.user,
+                        weight="bold",
                     ),
-                    bgcolor=self.message.avatar(),
-                ),
-                Column(
-                    controls=[
-                        Text(
-                            value=self.message.user,
-                            weight="bold",
+                    Container(
+                        content=Text(
+                            value=self.message.text,
+                            no_wrap=False,
+                            max_lines=4,
+                            overflow=TextOverflow.FADE,
                         ),
-                        Container(
-                            content=Text(
-                                value=self.message.text,
-                                no_wrap=False,
-                                max_lines=4,
-                                overflow=TextOverflow.FADE,
-                            ),
-                            border=None,
-                            expand=False,
-                            border_radius=border_radius.only(0, 25, 25, 25),
-                            bgcolor=colors.SECONDARY_CONTAINER,
-                            padding=padding.symmetric(8, 12),
-                        ),
-                    ],
-                    tight=True,
-                    spacing=5,
-                ),
-            ],
-            vertical_alignment=CrossAxisAlignment.START,
-        )
+                        border=None,
+                        expand=False,
+                        border_radius=border_radius.only(0, 25, 25, 25),
+                        bgcolor=colors.SECONDARY_CONTAINER,
+                        padding=padding.symmetric(8, 12),
+                    ),
+                ],
+                tight=True,
+                spacing=5,
+            ),
+        ]
 
 
-class ChatWindowControl(UserControl):
+class ChatWindowControl(ListView):
     """
     A scrollable list of chat messages
     """
 
-    def __init__(self, page: Page):
-        super().__init__()
-        self.page = page
-        self.control = Ref[ListView]()
-        self.page.pubsub.subscribe(lambda message: self.__subscribe__(message=message))
+    def __init__(self, ref: Optional[Ref] = None):
+        super().__init__(ref=ref)
+        self.expand = True
+        self.auto_scroll = True
+        self.spacing = 8
+        self.padding = 16
 
     def __subscribe__(self, message: Message):
-        self.control.current.controls.append(
-            MessageControl(page=self.page, message=message)
-        )
-        self.control.current.update()
-        # self.page.update()
+        self.controls.append(MessageControl(message=message))
+        self.update()
 
     def build(self):
-        return ListView(
-            ref=self.control,
-            expand=True,
-            auto_scroll=True,
-            spacing=8,
-            padding=16,
-        )
+        self.page.pubsub.subscribe(lambda message: self.__subscribe__(message=message))
 
 
 class ChatBoxControl(Row):
-    def __init__(self, page: Page):
+    def __init__(self):
         super().__init__()
-        self.page = page
         self.isQuestion = False
         self.isListening = False
         self._stop_background_thread_listener = lambda wait_for_stop=True: None
@@ -145,19 +132,13 @@ class ChatBoxControl(Row):
         self.file = Ref[FilePicker]()
         self.timer = Ref[TimerControl]()
         self.mic = Ref[IconButton]()
-        self.page.overlay.append(
-            FilePicker(
-                ref=self.file,
-                on_result=lambda event: self.__on_result__(event=event),
-            )
-        )
         self._text_hint_text = "enter a prompt".capitalize()
         self._mic_hint_text = "listening...".capitalize()
         self.controls = [
             TextField(
                 ref=self.text,
                 hint_text=self._text_hint_text,
-                dense=False,
+                dense=True,
                 filled=True,
                 expand=True,
                 adaptive=True,
@@ -173,6 +154,7 @@ class ChatBoxControl(Row):
                     tooltip="send message".capitalize(),
                     on_click=lambda _: self.__on_click__(event=_),
                 ),
+                text_vertical_align=VerticalAlignment.CENTER,
             ),
             IconButton(
                 icon=icons.UPLOAD_FILE,
@@ -185,7 +167,6 @@ class ChatBoxControl(Row):
                 controls=[
                     TimerControl(
                         ref=self.timer,
-                        page=self.page,
                         color=colors.PRIMARY,
                         visible=False,
                         timeout=30,
@@ -208,7 +189,15 @@ class ChatBoxControl(Row):
             ),
         ]
 
-    def __fetch_answer__(self, text: str, text_pair: str) -> typing.Any | None:
+    def build(self):
+        self.page.overlay.append(
+            FilePicker(
+                ref=self.file,
+                on_result=lambda event: self.__on_result__(event=event),
+            )
+        )
+
+    def __fetch_answer__(self, text: str, text_pair: str) -> Any | None:
         if not text and not text_pair:
             return None
 
@@ -361,5 +350,5 @@ class ChatBoxControl(Row):
             # Also, since :param effect of TimerControl
             # will be called once only after it is no longer ticking
             # it could introduce more delayed wait
-            self._stop_background_thread_listener(wait_for_stop=True)
+            self._stop_background_thread_listener(wait_for_stop=False)
             self.__reset_timer__()

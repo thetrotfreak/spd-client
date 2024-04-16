@@ -20,15 +20,14 @@ def main(page: Page):
     Preference(page).load()
 
     page.add(
-        WindowControl(page=page, title="Flet"),
+        WindowControl(title="Flet"),
         Row(
             controls=[
-                SideRail(page=page),
-                # VerticalDivider(width=1),
+                SideRail(),
                 Column(
                     controls=[
                         Container(
-                            content=ChatWindowControl(page),
+                            content=ChatWindowControl(),
                             border=border.all(
                                 width=1.25,
                                 color=colors.OUTLINE_VARIANT,
@@ -36,7 +35,7 @@ def main(page: Page):
                             expand=True,
                             border_radius=border_radius.all(25),
                         ),
-                        ChatBoxControl(page=page),
+                        ChatBoxControl(),
                     ],
                     expand=True,
                     alignment=MainAxisAlignment.START,

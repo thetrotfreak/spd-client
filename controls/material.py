@@ -1,17 +1,17 @@
+from typing import Callable, Optional
+
 from flet import (
     AlertDialog,
     BoxShape,
     Container,
     ControlEvent,
-    Dropdown,
     Icon,
-    Page,
     Ref,
     ResponsiveRow,
     Text,
     TextAlign,
     TextThemeStyle,
-    UserControl,
+    Theme,
     colors,
     icons,
 )
@@ -19,40 +19,38 @@ from flet import (
 from utils import Preference
 
 
-class MaterialYouCustomizationDialog(UserControl):
-    def __init__(self, page: Page):
-        super().__init__()
-        self.preference = Preference(page)
-        self.page = page
-        self.dropdown = Ref[Dropdown]()
-        self._color_clickable = Ref[ResponsiveRow]()
-        self._active_container = Ref[Container]()
-        self.dialog = AlertDialog(
-            title=Text(
-                value="material accent".title(),
-                theme_style=TextThemeStyle.TITLE_LARGE,
-                expand=True,
-                text_align=TextAlign.CENTER,
-            ),
-            content=ResponsiveRow(
-                ref=self._color_clickable,
-                controls=[
-                    *map(lambda color: self.button(color), Preference.__COLORS__)
-                ],
-            ),
-        )
+class MaterialYouCustomizationDialog(AlertDialog):
+    def __init__(
+        self,
+        ref: Optional[Ref] = None,
+        open: bool = False,
+        on_dismiss: Optional[Callable[..., None]] = None,
+    ):
+        super().__init__(ref=ref)
+        self.open = open
+        self._palette = Ref[ResponsiveRow]()
+        self._color = Ref[Container]()
+        self.on_dismiss = self._decorator_on_dismiss(on_dismiss)
+
+    def _decorator_on_dismiss(self, on_dismiss: Optional[Callable[..., None]]):
+        def wrapper_on_dismiss(*args, **kwargs):
+            if on_dismiss is not None:
+                on_dismiss(*args, **kwargs)
+            Preference(page=self.page).update(k="accent", v=self._color.current.bgcolor)
+
+        return wrapper_on_dismiss
 
     def __on_click__(self, event: ControlEvent):
         # remove icon from current accent
-        self._active_container.current.content = None
-        self._active_container.current.update()
+        self._color.current.content = None
+        self._color.current.update()
 
         # iterate over all color containers
         # updating only the clicked color container
-        for index, container in enumerate(self._color_clickable.current.controls):
+        for index, container in enumerate(self._palette.current.controls):
             if container.key == event.control.key:
-                self._color_clickable.current.controls[index] = Container(
-                    ref=self._active_container,
+                self._palette.current.controls[index] = Container(
+                    ref=self._color,
                     key=event.control.key,
                     content=Icon(
                         name=icons.DONE,
@@ -70,16 +68,17 @@ class MaterialYouCustomizationDialog(UserControl):
                     tooltip=event.control.bgcolor.title(),
                 )
                 break
-        self.preference.update(k="accent", v=event.control.bgcolor)
-        self._color_clickable.current.update()
+        self.page.theme = Theme(color_scheme_seed=event.control.bgcolor)
+        self.page.dark_theme = Theme(color_scheme_seed=event.control.bgcolor)
+        self._palette.current.update()
         self.page.update()
 
-    def button(self, color: str) -> Container:
+    def _button(self, accent: str) -> Container:
         return Container(
-            key=color,
+            key=accent,
             ref=(
-                self._active_container
-                if self.page.theme.color_scheme_seed.casefold() == color.casefold()
+                self._color
+                if self.page.theme.color_scheme_seed.casefold() == accent.casefold()
                 else None
             ),
             content=(
@@ -87,10 +86,10 @@ class MaterialYouCustomizationDialog(UserControl):
                     name=icons.DONE,
                     color=colors.ON_PRIMARY,
                 )
-                if self.page.theme.color_scheme_seed.casefold() == color.casefold()
+                if self.page.theme.color_scheme_seed.casefold() == accent.casefold()
                 else None
             ),
-            bgcolor=color,
+            bgcolor=accent,
             width=24 * 2,
             height=24 * 2,
             col=2,
@@ -99,13 +98,17 @@ class MaterialYouCustomizationDialog(UserControl):
             expand=False,
             shadow=None,
             ink=False,
-            tooltip=color.title(),
+            tooltip=accent.title(),
         )
 
-    def open(self):
-        self.page.dialog = self.dialog
-        self.dialog.open = True
-        self.page.update()
-
     def build(self):
-        return self.dialog
+        self.title = Text(
+            value="material accent".title(),
+            theme_style=TextThemeStyle.TITLE_LARGE,
+            expand=True,
+            text_align=TextAlign.CENTER,
+        )
+        self.content = ResponsiveRow(
+            ref=self._palette,
+            controls=[*map(lambda color: self._button(color), Preference.__COLORS__)],
+        )

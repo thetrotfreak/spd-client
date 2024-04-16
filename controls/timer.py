@@ -2,7 +2,7 @@ import asyncio
 from concurrent.futures import Future
 from typing import Any, Callable, Optional
 
-from flet import Page, Text
+from flet import Text
 from flet_core.ref import Ref
 
 
@@ -13,7 +13,6 @@ class TimerControl(Text):
 
     def __init__(
         self,
-        page: Page,
         ref: Optional[Ref] = None,
         timeout: Optional[int] = None,
         color: Optional[str] = None,
@@ -21,8 +20,9 @@ class TimerControl(Text):
         callback: Optional[Callable[..., Any]] = None,
         effect: Optional[Callable[..., Any]] = None,
     ):
-        super().__init__(ref=ref, color=color, visible=visible)
-        self.page = page
+        super().__init__(ref=ref)
+        self.color = color
+        self.visible = visible
         self._seconds = 0  # seconds counter
         self._frequency = 1  # how frequently we should update, every 1 second
         self._precision = 60  # extract Minute(s) & Second(s)
@@ -35,7 +35,6 @@ class TimerControl(Text):
         self.effect = (
             effect  # callable only once after the timer has timed-out or preempted
         )
-        self.reset()
 
     def _effect_wrapper(self, future: Future[Any]) -> object:
         """
@@ -52,6 +51,7 @@ class TimerControl(Text):
         so there is no need for manual update
         """
         self.value = f"{minutes:02d}:{seconds:02d}"
+        self._seconds = seconds + (minutes * 60)
         self.update()
 
     def reset(self):
@@ -68,16 +68,35 @@ class TimerControl(Text):
         """
         if self._is_ticking:
             self._is_ticking = False
+            self.update()
 
     def start(self):
         """
-        Will only ever start if clock ever stopped
+        Will only ever start if clock was ever stopped
         """
         if not self._is_ticking:
             self._is_ticking = True
+            self.update()
+
+    def build(self):
+        self.value = f"{0:02d}:{0:02d}"  # default value
+        # BUG
+        # does not work here, Text never appears
+        # self.set(0,0)
+
+    def before_update(self):
+        # make sure only start() can ever start the time
+        # any call to self.update() causes this lifecycle to re-run
+        # possibly add many self._tick() coroutines
+        if self._is_ticking:
             if not self._task or self._task.done():
                 self._task = self.page.run_task(self._tick)
                 self._task.add_done_callback(self._effect_wrapper)
+
+    def will_unmount(self):
+        # cleanup
+        # will cause self._tick corountine to stop
+        self._is_ticking = False
 
     def toggle(self, should_reset: bool = False):
         """

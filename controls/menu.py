@@ -1,66 +1,50 @@
-from flet import (
-    Divider,
-    Page,
-    PopupMenuButton,
-    PopupMenuItem,
-    Ref,
-    ThemeMode,
-    UserControl,
-    icons,
-)
+from flet import Divider, PopupMenuButton, PopupMenuItem, Ref, ThemeMode, icons
 
 from controls.material import MaterialYouCustomizationDialog
 from controls.theme import ChooseThemeDialog
-from utils.preferences import Preference
 
 
-class MenuControl(UserControl):
-    def __init__(self, page: Page):
+class MenuControl(PopupMenuButton):
+    def __init__(self):
         super().__init__()
-        self.page = page
         self.__theme_mode_popup_menu_item = Ref[PopupMenuItem]()
 
-    @staticmethod
-    def __theme_mode_icon__() -> str:
-        if Preference.config.get("theme") == ThemeMode.LIGHT.value:
-            return icons.LIGHT_MODE
-        elif Preference.config.get("theme") == ThemeMode.DARK.value:
-            return icons.DARK_MODE
-        else:
-            return icons.CONTRAST
+    def _theme_mode_icon(self) -> str:
+        match ThemeMode(self.page.theme_mode):
+            case ThemeMode.LIGHT:
+                return icons.LIGHT_MODE
+            case ThemeMode.DARK:
+                return icons.DARK_MODE
+            case ThemeMode.SYSTEM:
+                return icons.CONTRAST
 
-    def __callback_theme_mode_icon__(self) -> None:
-        if self.page.theme_mode == ThemeMode.LIGHT.value:
-            self.__theme_mode_popup_menu_item.current.icon = icons.LIGHT_MODE
-        elif self.page.theme_mode == ThemeMode.DARK.value:
-            self.__theme_mode_popup_menu_item.current.icon = icons.DARK_MODE
-        else:
-            self.__theme_mode_popup_menu_item.current.icon = icons.CONTRAST
+    def _callback_theme_mode_icon(self):
+        self.__theme_mode_popup_menu_item.current.icon = self._theme_mode_icon()
         self.__theme_mode_popup_menu_item.current.update()
 
     def build(self):
-        return PopupMenuButton(
-            items=[
-                PopupMenuItem(
-                    ref=self.__theme_mode_popup_menu_item,
-                    icon=MenuControl.__theme_mode_icon__(),
-                    text="app theme".title(),
-                    on_click=lambda _: ChooseThemeDialog(
-                        page=self.page, callback=self.__callback_theme_mode_icon__
-                    ).open(),
+        self.items = [
+            PopupMenuItem(
+                ref=self.__theme_mode_popup_menu_item,
+                icon=self._theme_mode_icon(),
+                text="app theme".title(),
+                on_click=lambda _: self.page.show_dialog(
+                    dialog=ChooseThemeDialog(
+                        on_dismiss=lambda _: self._callback_theme_mode_icon()
+                    )
                 ),
-                PopupMenuItem(
-                    icon=icons.COLOR_LENS,
-                    text="accent color".title(),
-                    on_click=lambda _: MaterialYouCustomizationDialog(
-                        page=self.page
-                    ).open(),
+            ),
+            PopupMenuItem(
+                icon=icons.COLOR_LENS,
+                text="accent color".title(),
+                on_click=lambda _: self.page.show_dialog(
+                    dialog=MaterialYouCustomizationDialog()
                 ),
-                Divider(),
-                PopupMenuItem(
-                    icon=icons.EXIT_TO_APP,
-                    text="Exit",
-                    on_click=lambda _: self.page.window_destroy(),
-                ),
-            ]
-        )
+            ),
+            Divider(),
+            PopupMenuItem(
+                icon=icons.EXIT_TO_APP,
+                text="exit".capitalize(),
+                on_click=lambda _: self.page.window_destroy(),
+            ),
+        ]
