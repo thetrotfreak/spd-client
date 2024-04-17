@@ -5,9 +5,6 @@ import requests
 from flet import (
     Animation,
     AnimationCurve,
-    CircleAvatar,
-    Column,
-    Container,
     ControlEvent,
     CrossAxisAlignment,
     FilePicker,
@@ -18,86 +15,18 @@ from flet import (
     MainAxisAlignment,
     Ref,
     Row,
-    Text,
     TextField,
-    TextOverflow,
     VerticalAlignment,
     border_radius,
     colors,
     icons,
-    padding,
 )
 from speech_recognition import AudioData, Microphone, Recognizer
 
-from utils import Preference
-
+from .message import Message, MessageControl
 from .timer import TimerControl
 
 ROUTE = {"QA": "http://localhost:8000/qa"}
-
-
-class Message:
-    def __init__(
-        self,
-        user: str | None = None,
-        text: str | None = None,
-        image: str | None = None,
-        randomizer: bool = False,
-    ):
-        self.user = user if user is not None else "You"
-        self.text = text
-        self.image = image
-        self.__randomizer = randomizer
-
-    def avatar(self):
-        if self.__randomizer:
-            return Preference.__COLORS__[hash(self.user) % len(Preference.__COLORS__)]
-        else:
-            return colors.PRIMARY_CONTAINER
-
-
-class MessageControl(Row):
-    """
-    Formatted messages
-    """
-
-    def __init__(self, message: Message):
-        super().__init__()
-        self.message = message
-        self.vertical_alignment = CrossAxisAlignment.START
-
-    def build(self):
-        self.controls = [
-            CircleAvatar(
-                content=Text(
-                    value=self.message.user[0].capitalize(),
-                ),
-                bgcolor=self.message.avatar(),
-            ),
-            Column(
-                controls=[
-                    Text(
-                        value=self.message.user,
-                        weight="bold",
-                    ),
-                    Container(
-                        content=Text(
-                            value=self.message.text,
-                            no_wrap=False,
-                            max_lines=4,
-                            overflow=TextOverflow.FADE,
-                        ),
-                        border=None,
-                        expand=False,
-                        border_radius=border_radius.only(0, 25, 25, 25),
-                        bgcolor=colors.SECONDARY_CONTAINER,
-                        padding=padding.symmetric(8, 12),
-                    ),
-                ],
-                tight=True,
-                spacing=5,
-            ),
-        ]
 
 
 class ChatWindowControl(ListView):
@@ -221,8 +150,8 @@ class ChatBoxControl(Row):
         if event.files is not None:
             self.page.pubsub.send_all(
                 Message(
-                    user=self.page.session.get("user"),
-                    text=self.text.current.value,
+                    author=self.page.session.get("user"),
+                    body=self.text.current.value,
                 )
             )
             self.page.update()
@@ -232,8 +161,8 @@ class ChatBoxControl(Row):
         if event.control.value:
             self.page.pubsub.send_all(
                 Message(
-                    user=self.page.session.get("user"),
-                    text=event.control.value,
+                    author=self.page.session.get("user"),
+                    body=event.control.value,
                 )
             )
             if self.isQuestion:
@@ -243,7 +172,7 @@ class ChatBoxControl(Row):
                 if answer:
                     answerDict = json.loads(answer)
                     self.page.pubsub.send_all(
-                        Message(user="ChatGPT", text=answerDict.get("answer"))
+                        Message(author="ChatGPT", body=answerDict.get("answer"))
                     )
             else:
                 self.questionText = event.control.value
@@ -258,8 +187,8 @@ class ChatBoxControl(Row):
         if self.text.current.value:
             self.page.pubsub.send_all(
                 Message(
-                    user=self.page.session.get("user"),
-                    text=self.text.current.value,
+                    author=self.page.session.get("user"),
+                    body=self.text.current.value,
                 )
             )
             self.text.current.value = None
