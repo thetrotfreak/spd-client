@@ -3,18 +3,19 @@ from typing import Any, Optional
 
 import requests
 from flet import (
+    AlertDialog,
     Animation,
     AnimationCurve,
     ControlEvent,
     CrossAxisAlignment,
-    FilePicker,
-    FilePickerFileType,
     FilePickerResultEvent,
+    Icon,
     IconButton,
     ListView,
     MainAxisAlignment,
     Ref,
     Row,
+    Text,
     TextField,
     VerticalAlignment,
     border_radius,
@@ -23,8 +24,10 @@ from flet import (
 )
 from speech_recognition import AudioData, Microphone, Recognizer
 
+from .blob import BlobPicker
 from .message import Message, MessageControl
 from .timer import TimerControl
+from .url import URL, url
 
 ROUTE = {"QA": "http://localhost:8000/qa"}
 
@@ -54,15 +57,25 @@ class ChatBoxControl(Row):
         super().__init__()
         self.isQuestion = False
         self.isListening = False
+        self.isBlob = False
         self._stop_background_thread_listener = lambda wait_for_stop=True: None
         self.questionText = ""
         self.payload = {"text": "", "text_pair": ""}
         self.text = Ref[TextField]()
-        self.file = Ref[FilePicker]()
+        self.file = Ref[BlobPicker]()
         self.timer = Ref[TimerControl]()
         self.mic = Ref[IconButton]()
         self._text_hint_text = "enter a prompt".capitalize()
         self._mic_hint_text = "listening...".capitalize()
+        self.file_preview_dialog = AlertDialog(
+            icon=Icon(icons.INSERT_DRIVE_FILE),
+            actions=[
+                IconButton(
+                    icon=icons.SEND, on_click=lambda _: self.__on_send__(blob=True)
+                )
+            ],
+            actions_alignment=MainAxisAlignment.END,
+        )
         self.controls = [
             TextField(
                 ref=self.text,
@@ -81,16 +94,14 @@ class ChatBoxControl(Row):
                 suffix=IconButton(
                     icon=icons.SEND,
                     tooltip="send message".capitalize(),
-                    on_click=lambda _: self.__on_click__(event=_),
+                    on_click=lambda _: self.__on_send__(event=_),
                 ),
                 text_vertical_align=VerticalAlignment.CENTER,
             ),
             IconButton(
                 icon=icons.UPLOAD_FILE,
                 tooltip="Upload image/pdf",
-                on_click=lambda _: self.file.current.pick_files(
-                    file_type=FilePickerFileType.IMAGE,
-                ),
+                on_click=lambda _: self.file.current.pick_files(),
             ),
             Row(
                 controls=[
@@ -120,7 +131,7 @@ class ChatBoxControl(Row):
 
     def build(self):
         self.page.overlay.append(
-            FilePicker(
+            BlobPicker(
                 ref=self.file,
                 on_result=lambda event: self.__on_result__(event=event),
             )
@@ -133,7 +144,7 @@ class ChatBoxControl(Row):
         self.payload.update({"text": text})
         self.payload.update({"text_pair": text_pair})
 
-        response = requests.post(url=ROUTE.get("QA"), data=json.dumps(self.payload))
+        response = requests.post(url=url(URL.BERT), data=json.dumps(self.payload))
         if response.ok:
             return response.content
         else:
@@ -148,13 +159,48 @@ class ChatBoxControl(Row):
 
     def __on_result__(self, event: FilePickerResultEvent):
         if event.files is not None:
-            self.page.pubsub.send_all(
-                Message(
-                    author=self.page.session.get("user"),
-                    body=self.text.current.value,
-                )
+            self.file_preview_dialog.content = Row(
+                controls=[Text(event.files[0].name)],
+                alignment=MainAxisAlignment.CENTER,
             )
-            self.page.update()
+            self.page.show_dialog(self.file_preview_dialog)
+
+    def ok_callback(self, resp: bytes):
+        """
+        On a HTTP 200 response for file upload, update the text with the OCR
+        """
+        resp_dict: dict = json.loads(resp.decode())
+        self.page.pubsub.send_all(
+            Message(
+                author=self.page.session.get("user"),
+                body=resp_dict.get("context"),
+            )
+        )
+        self.isQuestion = True
+        self.questionText = resp_dict.get("context")
+
+    def err_callback(self):
+        """
+        Reset internal file picker selection for failed uploads
+        """
+        # BUG
+        # consider this scenario
+        # we upload a file too large and the server denies processing
+        # this callback is then invoked, setting internal file selection to None
+        # but the BlobPicker lets you retry upload, which will fail
+        # as internal file selection must not be empty when calling upload()
+        self.file.current.result.files = None
+        self.file.current.update()
+
+    def animation_callback(self):
+        # self.text.current.animate_opacity = animate_opacity = Animation(
+        #     duration=4000,
+        #     curve=AnimationCurve.EASE_IN_OUT,
+        # )
+        # self.text.current.update()
+        # self.text.current.opacity = 0 if self.text.current.opacity == 1 else 1
+        # self.text.current.update()
+        return
 
     def __on_submit__(self, event: ControlEvent):
         self.__nullify_whitespace_text__()
@@ -172,7 +218,7 @@ class ChatBoxControl(Row):
                 if answer:
                     answerDict = json.loads(answer)
                     self.page.pubsub.send_all(
-                        Message(author="ChatGPT", body=answerDict.get("answer"))
+                        Message(author="Flet", body=answerDict.get("answer"))
                     )
             else:
                 self.questionText = event.control.value
@@ -182,19 +228,35 @@ class ChatBoxControl(Row):
             event.control.focus()
             self.page.update()
 
-    def __on_click__(self, event: ControlEvent):
-        self.__nullify_whitespace_text__()
-        if self.text.current.value:
-            self.page.pubsub.send_all(
-                Message(
-                    author=self.page.session.get("user"),
-                    body=self.text.current.value,
+    def __on_send__(self, event: ControlEvent = None, blob: bool = False):
+        """
+        Sends either textual prompt or File (image/pdf)
+
+        If both are available, prefers File over text
+
+        File will be considered only for context. Prompts can be either questions or context.
+        However, when using prompts, only first prompt will be considered for context.
+        """
+        if self.file.current.result.files:
+            self.file_preview_dialog.open = False
+            self.file_preview_dialog.update()
+            if self.file.current.result.files:
+                self.file.current.upload(
+                    ok_callback=self.ok_callback, err_callback=self.err_callback
                 )
-            )
-            self.text.current.value = None
-            self.text.current.focus()
-            self.text.current.update()
-            self.page.update()
+        else:
+            self.__nullify_whitespace_text__()
+            if self.text.current.value:
+                self.page.pubsub.send_all(
+                    Message(
+                        author=self.page.session.get("user"),
+                        body=self.text.current.value,
+                    )
+                )
+                self.text.current.value = None
+                self.text.current.focus()
+                self.text.current.update()
+                self.page.update()
 
     def _speech_to_text_callback(self, recognizer: Recognizer, audio: AudioData):
         # this will be called from a non-main thread
@@ -279,5 +341,5 @@ class ChatBoxControl(Row):
             # Also, since :param effect of TimerControl
             # will be called once only after it is no longer ticking
             # it could introduce more delayed wait
-            self._stop_background_thread_listener(wait_for_stop=False)
+            self._stop_background_thread_listener(wait_for_stop=True)
             self.__reset_timer__()
