@@ -1,20 +1,20 @@
 from copy import deepcopy
 from json import JSONDecodeError, dump, load
 from pathlib import Path
-from typing import Literal, NamedTuple, TypedDict
+from typing import Literal, NamedTuple, TypedDict, Union
 
 from flet_core import Page, Theme, ThemeMode, colors
 from jsonschema import ValidationError, validate
 
 
 class PreferenceSchema(TypedDict):
-    theme: str
+    theme: ThemeMode
     accent: str
 
 
 class Configuration(NamedTuple):
     path: Path
-    schema: PreferenceSchema
+    schema: dict  # JSON Schema
     default: PreferenceSchema
 
 
@@ -33,10 +33,10 @@ class Preference:
         ),
     )
 
-    __PROPERTY__ = Literal["theme", "accent"]
+    PROPERTY = Literal["theme", "accent"]
 
-    __COLORS__ = sorted(
-        [
+    COLORS = sorted(
+        (
             "RED",
             "PINK",
             "PURPLE",
@@ -50,11 +50,10 @@ class Preference:
             "AMBER",
             "ORANGE",
             "BROWN",
-        ]
+        )
     )
 
     config = deepcopy(__config__.default)
-    page: Page = None
 
     def __init__(self, page: Page):
         Preference.page = page
@@ -110,7 +109,7 @@ class Preference:
         Preference.page.update()
 
     @staticmethod
-    def update(k: __PROPERTY__, v: str):
+    def update(k: PROPERTY, v: Union[ThemeMode, str]):
         """
         Call this to persist changes by writing it to config.json
         Also updates the page

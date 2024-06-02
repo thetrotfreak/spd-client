@@ -110,5 +110,5 @@ class MaterialYouCustomizationDialog(AlertDialog):
         )
         self.content = ResponsiveRow(
             ref=self._palette,
-            controls=[*map(lambda color: self._button(color), Preference.__COLORS__)],
+            controls=[*map(lambda color: self._button(color), Preference.COLORS)],
         )

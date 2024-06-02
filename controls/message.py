@@ -38,7 +38,7 @@ class Message:
         :param self.match_accent decides whether to match Page accent or a randomly choosen color
         """
         if self.accent:
-            return Preference.__COLORS__[hash(self.author) % len(Preference.__COLORS__)]
+            return Preference.COLORS[hash(self.author) % len(Preference.COLORS)]
         else:
             return colors.PRIMARY_CONTAINER
 
